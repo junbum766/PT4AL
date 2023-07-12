@@ -17,6 +17,9 @@ from loader import Loader, RotationLoader
 from utils import progress_bar
 import numpy as np
 
+import time ### 
+
+
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
@@ -43,10 +46,10 @@ transform_test = transforms.Compose([
 ])
 
 trainset = RotationLoader(is_train=True, transform=transform_test)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True, num_workers=8) ### 2 -> 8
 
 testset = RotationLoader(is_train=False,  transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
+testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=8) ### 2 -> 8
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -139,7 +142,7 @@ def test(epoch):
 
     # Save checkpoint.
     acc = 100.*correct/total
-    with open('./best_rotation.txt','a') as f:
+    with open('./best_rotation_4.txt','a') as f:  #####
         f.write(str(acc)+':'+str(epoch)+'\n')
     if acc > best_acc:
         print('Saving..')
@@ -148,14 +151,19 @@ def test(epoch):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
+        if not os.path.isdir('checkpoint_4'): #####
+            os.mkdir('checkpoint_4') #####
         # save rotation weights
-        torch.save(state, './checkpoint/rotation.pth')
+        torch.save(state, './checkpoint_4/rotation.pth') #####
         best_acc = acc
 
 
-for epoch in range(start_epoch, start_epoch+15):
+start = time.time() ###
+
+for epoch in range(start_epoch, start_epoch+120): ### 15 -> 120
     train(epoch)
     test(epoch)
     scheduler.step()
+
+end = time.time() ###
+print(f"...it takes {end - start} sec") ###

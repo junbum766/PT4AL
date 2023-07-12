@@ -12,31 +12,31 @@ class save_dataset(torch.utils.data.Dataset):
 
   def __getitem__(self, i):
       x, y = self.dataset[i]
-      path = './DATA/'+self.split+'/'+str(y)+'/'+str(i)+'.png'
+      path = '/data/cifar10/PT4AL/'+self.split+'/'+str(y)+'/'+str(i)+'.png'
 
-      if not os.path.isdir('./DATA/'+self.split+'/'+str(y)):
-          os.mkdir('./DATA/'+self.split+'/'+str(y))
-
+      if not os.path.isdir('/data/cifar10/PT4AL/'+self.split+'/'+str(y)):
+          os.mkdir('/data/cifar10/PT4AL/'+self.split+'/'+str(y))
+``
       x.save(path)
 
   def __len__(self):
     return len(self.dataset)
 
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=None)
+trainset = torchvision.datasets.CIFAR10(root='/data/cifar10', train=True, download=True, transform=None)
 
-testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=None)
+testset = torchvision.datasets.CIFAR10(root='/data/cifar10', train=False, download=True, transform=None)
 
 train_dataset = save_dataset(trainset, split='train')
 test_dataset = save_dataset(testset, split='test')
 
-if not os.path.isdir('./DATA'):
-    os.mkdir('./DATA')
+if not os.path.isdir('/data/cifar10/PT4AL'):
+    os.mkdir('/data/cifar10/PT4AL')
 
-if not os.path.isdir('./DATA/train'):
-    os.mkdir('./DATA/train')
+if not os.path.isdir('/data/cifar10/PT4AL/train'):
+    os.mkdir('/data/cifar10/PT4AL/train')
 
-if not os.path.isdir('./DATA/test'):
-    os.mkdir('./DATA/test')
+if not os.path.isdir('/data/cifar10/PT4AL/test'):
+    os.mkdir('/data/cifar10/PT4AL/test')
 
 for idx, i in enumerate(train_dataset):
     train_dataset[idx]

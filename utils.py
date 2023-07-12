@@ -7,6 +7,7 @@ import os
 import sys
 import time
 import math
+import shutil ### 
 
 import torch.nn as nn
 import torch.nn.init as init
@@ -41,8 +42,8 @@ def init_params(net):
             if m.bias:
                 init.constant(m.bias, 0)
 
-
-_, term_width = os.popen('stty size', 'r').read().split()
+_, term_width = shutil.get_terminal_size() ### import shutil
+# _, term_width = os.popen('stty size', 'r').read().split() # nohup으로 동작 안해서 위 코드로 바꿔줌 
 term_width = int(term_width)
 
 TOTAL_BAR_LENGTH = 65.
