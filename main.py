@@ -43,7 +43,7 @@ transform_test = transforms.Compose([
 ])
 
 testset = Loader(is_train=False, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=8) ### 2 -> 8
+testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=16) ### 2 -> 8
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -109,9 +109,9 @@ def test(net, criterion, epoch, cycle):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint_4'): #####
-            os.mkdir('checkpoint_4') #####
-        torch.save(state, f'./checkpoint_4/main_{cycle}.pth') #####
+        if not os.path.isdir('checkpoint'): #####
+            os.mkdir('checkpoint') #####
+        torch.save(state, f'./checkpoint/main_{cycle}.pth') #####
         best_acc = acc
 
 # class-balanced sampling (pseudo labeling)
@@ -121,7 +121,7 @@ def get_plabels(net, samples, cycle):
     [class_dict.setdefault(x,[]) for x in range(10)]
 
     sub5k = Loader2(is_train=False,  transform=transform_test, path_list=samples)
-    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=8) ### 2 -> 8
+    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=16) ### 2 -> 8
 
     # overflow goes into remaining
     remaining = []
@@ -159,7 +159,7 @@ def get_plabels2(net, samples, cycle):
 
     sample1k = []
     sub5k = Loader2(is_train=False,  transform=transform_test, path_list=samples)
-    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=8) ### 2 -> 8
+    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=16) ### 2 -> 8
 
     top1_scores = []
     net.eval()
@@ -182,7 +182,7 @@ def get_plabels2(net, samples, cycle):
 def get_plabels3(net, samples, cycle):
     sample1k = []
     sub5k = Loader2(is_train=False,  transform=transform_test, path_list=samples)
-    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=8) ### 2 -> 8
+    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=16) ### 2 -> 8
 
     top1_scores = []
     net.eval()
@@ -219,14 +219,14 @@ if __name__ == '__main__':
         print('Cycle ', cycle)
 
         # open 5k batch (sorted low->high)
-        with open(f'./loss_4/batch_{cycle}.txt', 'r') as f: #####
+        with open(f'./loss/batch_{cycle}.txt', 'r') as f: #####
             samples = f.readlines()
             
         if cycle > 0:
             print('>> Getting previous checkpoint')
             # prevnet = ResNet18().to(device)
             # prevnet = torch.nn.DataParallel(prevnet)
-            checkpoint = torch.load(f'./checkpoint_4/main_{cycle-1}.pth') #####
+            checkpoint = torch.load(f'./checkpoint/main_{cycle-1}.pth') #####
             net.load_state_dict(checkpoint['net'])
 
             # sampling
@@ -239,13 +239,13 @@ if __name__ == '__main__':
         labeled.extend(sample1k)
         print(f'>> Labeled length: {len(labeled)}')
         trainset = Loader2(is_train=True, transform=transform_train, path_list=labeled)
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=8) ### 2 -> 8
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=16) ### 2 -> 8
 
         for epoch in range(200):
             train(net, criterion, optimizer, epoch, trainloader)
             test(net, criterion, epoch, cycle)
             scheduler.step()
-        with open(f'./main_best_4.txt', 'a') as f: #####
+        with open(f'./main_best.txt', 'a') as f: #####
             f.write(str(cycle) + ' ' + str(best_acc)+'\n')
     
     end = time.time()

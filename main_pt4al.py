@@ -16,6 +16,8 @@ from models import *
 from utils import progress_bar
 from loader import Loader, Loader2, Loader_Cold
 
+from collections import OrderedDict ###
+
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
@@ -51,8 +53,26 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 
 # Model
 print('==> Building model..')
-net = ResNet18()
+net = ResNet18() 
+net.linear = nn.Linear(512, 4) ###
+
+### rotation pretrained model test. ###
+
+loaded_state_dict = torch.load('./checkpoint_2/rotation_2.pth')['net']
+new_state_dict = OrderedDict()
+
+for n, v in loaded_state_dict.items():
+    name = n.replace("module.","")
+    new_state_dict[name] = v
+
+net.load_state_dict(new_state_dict)
+net.linear = nn.Linear(512, 10)
+
+###
+
 net = net.to(device)
+
+
 
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
@@ -68,7 +88,7 @@ if args.resume:
     start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.1,momentum=0.9, weight_decay=5e-4)
+optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4) 
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[160])
 
 # Training

@@ -160,7 +160,7 @@ def test(epoch):
 
 start = time.time() ###
 
-for epoch in range(start_epoch, start_epoch+120): ### 15 -> 120
+for epoch in range(start_epoch, start_epoch+10):
     train(epoch)
     test(epoch)
     scheduler.step()
