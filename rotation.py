@@ -55,15 +55,21 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
 
 # Model
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
+os.environ["CUDA_VISIBLE_DEVICES"]= "2"  # Set the GPU 2 to use
+
 print('==> Building model..')
 net = ResNet18()
 net.linear = nn.Linear(512, 4)
 net = net.to(device)
 
+print('Device:', device)
+print('Current cuda device:', torch.cuda.current_device())
+print('Count of using GPUs:', torch.cuda.device_count())
 
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
+# if device == 'cuda':
+#     net = torch.nn.DataParallel(net)
+#     cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
@@ -142,7 +148,7 @@ def test(epoch):
 
     # Save checkpoint.
     acc = 100.*correct/total
-    with open('./best_rotation_4.txt','a') as f:  #####
+    with open('./best_rotation_5.txt','a') as f:  #####
         f.write(str(acc)+':'+str(epoch)+'\n')
     if acc > best_acc:
         print('Saving..')
@@ -151,16 +157,16 @@ def test(epoch):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint_4'): #####
-            os.mkdir('checkpoint_4') #####
+        if not os.path.isdir('checkpoint_5'): #####
+            os.mkdir('checkpoint_5') #####
         # save rotation weights
-        torch.save(state, './checkpoint_4/rotation.pth') #####
+        torch.save(state, './checkpoint_5/rotation.pth') #####
         best_acc = acc
 
 
 start = time.time() ###
 
-for epoch in range(start_epoch, start_epoch+10):
+for epoch in range(start_epoch, start_epoch+15):
     train(epoch)
     test(epoch)
     scheduler.step()

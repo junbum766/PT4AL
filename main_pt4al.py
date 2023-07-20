@@ -54,19 +54,19 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 # Model
 print('==> Building model..')
 net = ResNet18() 
-net.linear = nn.Linear(512, 4) ###
+# net.linear = nn.Linear(512, 4) ###
 
 ### rotation pretrained model test. ###
 
-loaded_state_dict = torch.load('./checkpoint_2/rotation_2.pth')['net']
-new_state_dict = OrderedDict()
+# loaded_state_dict = torch.load('./checkpoint_2/rotation_2.pth')['net']
+# new_state_dict = OrderedDict()
 
-for n, v in loaded_state_dict.items():
-    name = n.replace("module.","")
-    new_state_dict[name] = v
+# for n, v in loaded_state_dict.items():
+#     name = n.replace("module.","")
+#     new_state_dict[name] = v
 
-net.load_state_dict(new_state_dict)
-net.linear = nn.Linear(512, 10)
+# net.load_state_dict(new_state_dict)
+# net.linear = nn.Linear(512, 10)
 
 ###
 
@@ -74,15 +74,15 @@ net = net.to(device)
 
 
 
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
+# if device == 'cuda':
+#     net = torch.nn.DataParallel(net)
+#     cudnn.benchmark = True
 
 if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
-    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('./checkpoint/ckpt.pth')
+    assert os.path.isdir('checkpoint_5'), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load('./checkpoint_5/ckpt.pth')
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
@@ -144,9 +144,9 @@ def test(epoch):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        torch.save(state, './checkpoint/ckpt.pth')
+        if not os.path.isdir('checkpoint_5'):
+            os.mkdir('checkpoint_5')
+        torch.save(state, './checkpoint_5/ckpt.pth')
         best_acc = acc
 
 

@@ -34,12 +34,12 @@ net = ResNet18()
 net.linear = nn.Linear(512, 4)
 net = net.to(device)
 
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
+# if device == 'cuda':
+#     net = torch.nn.DataParallel(net)
+#     cudnn.benchmark = True
 
-checkpoint = torch.load('./checkpoint/rotation.pth') #####
-net.load_state_dict(checkpoint['net'])
+# checkpoint = torch.load('./checkpoint_5/rotation.pth') #####
+# net.load_state_dict(checkpoint['net'])
 
 criterion = nn.CrossEntropyLoss()
 
@@ -70,14 +70,14 @@ def test(epoch):
             loss = loss.item()
             s = str(float(loss)) + '_' + str(path[0]) + "\n"
 
-            with open('./rotation_loss.txt', 'a') as f: #####
+            with open('./rotation_loss_5.txt', 'a') as f: #####
                 f.write(s)
             progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                          % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 if __name__ == "__main__":
     test(1)
-    with open('./rotation_loss.txt', 'r') as f: #####
+    with open('./rotation_loss_5.txt', 'r') as f: #####
         losses = f.readlines()
 
     loss_1 = []
@@ -93,8 +93,8 @@ if __name__ == "__main__":
     x.reverse()
     sort_index = np.array(x) # convert to high loss first
 
-    if not os.path.isdir('loss'): #####
-        os.mkdir('loss') #####
+    if not os.path.isdir('loss_5'): #####
+        os.mkdir('loss_5') #####
     for i in range(10):
         # sample minibatch from unlabeled pool 
         sample5000 = sort_index[i*5000:(i+1)*5000]
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         for jj in sample5000:
             b[int(name_2[jj].split('/')[-2])] +=1
         print(f'{i} Class Distribution: {b}')
-        s = './loss/batch_' + str(i) + '.txt' #####
+        s = './loss_5/batch_' + str(i) + '.txt' #####
         for k in sample5000:
             with open(s, 'a') as f:
                 f.write(name_2[k]+'\n')
