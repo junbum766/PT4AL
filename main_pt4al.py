@@ -24,6 +24,9 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 args = parser.parse_args()
 
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
+os.environ["CUDA_VISIBLE_DEVICES"]= "1"  # Set the GPUs 3 to use
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -43,10 +46,10 @@ transform_test = transforms.Compose([
 ])
 
 trainset = Loader_Cold(is_train=True, transform=transform_train) 
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=8) ###
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2) ###
 
 testset = Loader_Cold(is_train=False, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=8) ###
+testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2) ###
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -74,15 +77,15 @@ net = net.to(device)
 
 
 
-# if device == 'cuda':
-#     net = torch.nn.DataParallel(net)
-#     cudnn.benchmark = True
+if device == 'cuda':
+    net = torch.nn.DataParallel(net)
+    cudnn.benchmark = True
 
 if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
-    assert os.path.isdir('checkpoint_5'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('./checkpoint_5/ckpt.pth')
+    assert os.path.isdir('checkpoint_6'), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load('./checkpoint_6/ckpt.pth')
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
@@ -144,9 +147,9 @@ def test(epoch):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint_5'):
-            os.mkdir('checkpoint_5')
-        torch.save(state, './checkpoint_5/ckpt.pth')
+        if not os.path.isdir('checkpoint_6'):
+            os.mkdir('checkpoint_6')
+        torch.save(state, './checkpoint_6/ckpt.pth')
         best_acc = acc
 
 

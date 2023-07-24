@@ -27,6 +27,9 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 args = parser.parse_args()
 
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
+os.environ["CUDA_VISIBLE_DEVICES"]= "2"  # Set the GPU 2 to use
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -46,17 +49,15 @@ transform_test = transforms.Compose([
 ])
 
 trainset = RotationLoader(is_train=True, transform=transform_test)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True, num_workers=8) ### 2 -> 8
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True, num_workers=2) ### 2 -> 8
 
 testset = RotationLoader(is_train=False,  transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=8) ### 2 -> 8
+testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2) ### 2 -> 8
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
 
 # Model
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
-os.environ["CUDA_VISIBLE_DEVICES"]= "2"  # Set the GPU 2 to use
 
 print('==> Building model..')
 net = ResNet18()
@@ -67,9 +68,9 @@ print('Device:', device)
 print('Current cuda device:', torch.cuda.current_device())
 print('Count of using GPUs:', torch.cuda.device_count())
 
-# if device == 'cuda':
-#     net = torch.nn.DataParallel(net)
-#     cudnn.benchmark = True
+if device == 'cuda':
+    net = torch.nn.DataParallel(net)
+    cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
@@ -148,7 +149,7 @@ def test(epoch):
 
     # Save checkpoint.
     acc = 100.*correct/total
-    with open('./best_rotation_5.txt','a') as f:  #####
+    with open('./best_rotation_6.txt','a') as f:  #####
         f.write(str(acc)+':'+str(epoch)+'\n')
     if acc > best_acc:
         print('Saving..')
@@ -157,10 +158,10 @@ def test(epoch):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint_5'): #####
-            os.mkdir('checkpoint_5') #####
+        if not os.path.isdir('checkpoint_6'): #####
+            os.mkdir('checkpoint_6') #####
         # save rotation weights
-        torch.save(state, './checkpoint_5/rotation.pth') #####
+        torch.save(state, './checkpoint_6/rotation.pth') #####
         best_acc = acc
 
 

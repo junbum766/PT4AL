@@ -81,7 +81,7 @@ class Loader_Cold(Dataset):
         self.is_train = is_train
         self.transform = transform
         with open(
-            './loss_5/batch_5.txt', 'r') as f:
+            './loss_6/batch_0.txt', 'r') as f:
             self.list = f.readlines()
         self.list = [self.list[i*5] for i in range(1000)]
         if self.is_train==True: # train

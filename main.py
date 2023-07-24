@@ -24,6 +24,16 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 args = parser.parse_args()
 
+txt_name = "main_best_6_b50_balancedClass_to_c3"
+checkpoint_name = "checkpoint_6_b50_balancedClass_to_c3"
+total_cycle = 6
+total_budget = 300
+cycle_budget = total_budget//total_cycle
+
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
+os.environ["CUDA_VISIBLE_DEVICES"]= "1"  # Set the GPUs 3 to use
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -43,7 +53,7 @@ transform_test = transforms.Compose([
 ])
 
 testset = Loader(is_train=False, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=16) ### 2 -> 8
+testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=4) ### 2 -> 8
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -51,11 +61,10 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 # Model
 print('==> Building model..')
 net = ResNet18()
-
 net = net.to(device)
-# if device == 'cuda':
-#     net = torch.nn.DataParallel(net)
-#     cudnn.benchmark = True
+if device == 'cuda':
+    net = torch.nn.DataParallel(net)
+    cudnn.benchmark = True
 
 # Training
 def train(net, criterion, optimizer, epoch, trainloader):
@@ -109,9 +118,9 @@ def test(net, criterion, epoch, cycle):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint'): #####
-            os.mkdir('checkpoint') #####
-        torch.save(state, f'./checkpoint/main_{cycle}.pth') #####
+        if not os.path.isdir(f'{checkpoint_name}'): #####
+            os.mkdir(f'{checkpoint_name}') #####
+        torch.save(state, f'./{checkpoint_name}/main_{cycle}.pth') #####
         best_acc = acc
 
 # class-balanced sampling (pseudo labeling)
@@ -121,7 +130,7 @@ def get_plabels(net, samples, cycle):
     [class_dict.setdefault(x,[]) for x in range(10)]
 
     sub5k = Loader2(is_train=False,  transform=transform_test, path_list=samples)
-    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=16) ### 2 -> 8
+    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=4) ### 2 -> 8
 
     # overflow goes into remaining
     remaining = []
@@ -159,7 +168,7 @@ def get_plabels2(net, samples, cycle):
 
     sample1k = []
     sub5k = Loader2(is_train=False,  transform=transform_test, path_list=samples)
-    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=16) ### 2 -> 8
+    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=4) ### 2 -> 8
 
     top1_scores = []
     net.eval()
@@ -176,13 +185,13 @@ def get_plabels2(net, samples, cycle):
     top1_scores = torch.tensor(top1_scores).cpu().numpy() ### 추가
     idx = np.argsort(top1_scores)
     samples = np.array(samples)
-    return samples[idx[:50]] ##### 1000
+    return samples[idx[:cycle_budget]] ##### 1000
 
 # entropy sampling
 def get_plabels3(net, samples, cycle):
     sample1k = []
     sub5k = Loader2(is_train=False,  transform=transform_test, path_list=samples)
-    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=16) ### 2 -> 8
+    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=4) ### 2 -> 8
 
     top1_scores = []
     net.eval()
@@ -204,29 +213,53 @@ def get_classdist(samples):
         class_dist[label] += 1
     return class_dist
 
+def get_balanced_class(samples, budget=1000, class_num=10): ## 실험용
+    sample1k = []
+    class_dist = np.zeros(10)
+    max = budget//class_num
+    for sample in samples:
+        label = int(sample.split('/')[-2])
+        if class_dist[label] >= max:
+            continue
+        else :
+            class_dist[label] += 1
+            samples.remove(sample)
+            sample1k.append(sample)
+    if len(sample1k) < budget: # 샘플 부족하면 아무거나 추가
+        for sample in samples:
+            label = int(sample.split('/')[-2])
+            class_dist[label] += 1
+            sample1k.append(sample)
+            if len(sample1k) >= budget:
+                break
+    print('sample distribution = ', class_dist)
+    sample1k = np.array(sample1k)
+    return sample1k
+
+
 if __name__ == '__main__':
     start = time.time() ###
 
     labeled = []
         
-    CYCLES = 6 #####
+    CYCLES = total_cycle #####
     for cycle in range(CYCLES):
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(net.parameters(), lr=0.1,momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[160])
 
         best_acc = 0
         print('Cycle ', cycle)
 
         # open 5k batch (sorted low->high)
-        with open(f'./loss/batch_{cycle}.txt', 'r') as f: #####
+        with open(f'./loss_6/batch_{cycle}.txt', 'r') as f: #####
             samples = f.readlines()
             
         if cycle > 0:
             print('>> Getting previous checkpoint')
             # prevnet = ResNet18().to(device)
             # prevnet = torch.nn.DataParallel(prevnet)
-            checkpoint = torch.load(f'./checkpoint/main_{cycle-1}.pth') #####
+            checkpoint = torch.load(f'./{checkpoint_name}/main_{cycle-1}.pth') #####
             net.load_state_dict(checkpoint['net'])
 
             # sampling
@@ -234,18 +267,19 @@ if __name__ == '__main__':
         else:
             # first iteration: sample 1k at even intervals
             samples = np.array(samples)
-            sample1k = samples[[j*5 for j in range(50)]] ##### 1000
+            sample1k = samples[[j*5 for j in range(cycle_budget)]] ##### 1000
+            # sample1k = get_balanced_class(samples, cycle_budget, 10) ##### 실험용
         # add 1k samples to labeled set
         labeled.extend(sample1k)
         print(f'>> Labeled length: {len(labeled)}')
         trainset = Loader2(is_train=True, transform=transform_train, path_list=labeled)
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=16) ### 2 -> 8
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=4) ### 2 -> 8
 
-        for epoch in range(200):
+        for epoch in range(200): ###
             train(net, criterion, optimizer, epoch, trainloader)
             test(net, criterion, epoch, cycle)
             scheduler.step()
-        with open(f'./main_best.txt', 'a') as f: #####
+        with open(f'./{txt_name}.txt', 'a') as f: #####
             f.write(str(cycle) + ' ' + str(best_acc)+'\n')
     
     end = time.time()

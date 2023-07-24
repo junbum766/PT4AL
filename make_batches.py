@@ -17,6 +17,10 @@ from models import *
 from loader import Loader, RotationLoader
 from utils import progress_bar
 
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
+os.environ["CUDA_VISIBLE_DEVICES"]= "2"  # Set the GPUs 3 to use
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -34,12 +38,12 @@ net = ResNet18()
 net.linear = nn.Linear(512, 4)
 net = net.to(device)
 
-# if device == 'cuda':
-#     net = torch.nn.DataParallel(net)
-#     cudnn.benchmark = True
+if device == 'cuda':
+    net = torch.nn.DataParallel(net)
+    cudnn.benchmark = True
 
-# checkpoint = torch.load('./checkpoint_5/rotation.pth') #####
-# net.load_state_dict(checkpoint['net'])
+checkpoint = torch.load('./checkpoint_6/rotation.pth') #####
+net.load_state_dict(checkpoint['net'])
 
 criterion = nn.CrossEntropyLoss()
 
@@ -70,14 +74,14 @@ def test(epoch):
             loss = loss.item()
             s = str(float(loss)) + '_' + str(path[0]) + "\n"
 
-            with open('./rotation_loss_5.txt', 'a') as f: #####
+            with open('./rotation_loss_6.txt', 'a') as f: #####
                 f.write(s)
             progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                          % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 if __name__ == "__main__":
     test(1)
-    with open('./rotation_loss_5.txt', 'r') as f: #####
+    with open('./rotation_loss_6.txt', 'r') as f: #####
         losses = f.readlines()
 
     loss_1 = []
@@ -93,8 +97,8 @@ if __name__ == "__main__":
     x.reverse()
     sort_index = np.array(x) # convert to high loss first
 
-    if not os.path.isdir('loss_5'): #####
-        os.mkdir('loss_5') #####
+    if not os.path.isdir('loss_6'): #####
+        os.mkdir('loss_6') #####
     for i in range(10):
         # sample minibatch from unlabeled pool 
         sample5000 = sort_index[i*5000:(i+1)*5000]
@@ -103,7 +107,7 @@ if __name__ == "__main__":
         for jj in sample5000:
             b[int(name_2[jj].split('/')[-2])] +=1
         print(f'{i} Class Distribution: {b}')
-        s = './loss_5/batch_' + str(i) + '.txt' #####
+        s = './loss_6/batch_' + str(i) + '.txt' #####
         for k in sample5000:
             with open(s, 'a') as f:
                 f.write(name_2[k]+'\n')
