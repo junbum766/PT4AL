@@ -9,6 +9,17 @@ import numpy as np
 import random
 import cv2
 
+class TypiLoader(Dataset):
+    def __init__(self, path='/home/ubuntu/junbeom/data/cifar10/PT4AL'):
+        self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/train/*/*')
+
+    def __len__(self):
+        return len(self.img_path)
+
+    def __getitem__(self, idx):
+        return self.img_path[idx]
+
+
 class RotationLoader(Dataset):
     def __init__(self, is_train=True, transform=None, path='/home/ubuntu/junbeom/data/cifar10/PT4AL'):
         self.is_train = is_train

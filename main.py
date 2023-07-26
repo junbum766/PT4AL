@@ -24,15 +24,14 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 args = parser.parse_args()
 
-txt_name = "main_best_6_b50_balancedClass_to_c3"
-checkpoint_name = "checkpoint_6_b50_balancedClass_to_c3"
+file_name = "_6_b50_base_changeLR"
 total_cycle = 6
 total_budget = 300
 cycle_budget = total_budget//total_cycle
 
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
-os.environ["CUDA_VISIBLE_DEVICES"]= "1"  # Set the GPUs 3 to use
+os.environ["CUDA_VISIBLE_DEVICES"]= "2"  # Set the GPUs 3 to use
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
@@ -118,9 +117,9 @@ def test(net, criterion, epoch, cycle):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir(f'{checkpoint_name}'): #####
-            os.mkdir(f'{checkpoint_name}') #####
-        torch.save(state, f'./{checkpoint_name}/main_{cycle}.pth') #####
+        if not os.path.isdir(f'checkpoint{file_name}'): #####
+            os.mkdir(f'checkpoint{file_name}') #####
+        torch.save(state, f'./checkpoint{file_name}/main_{cycle}.pth') #####
         best_acc = acc
 
 # class-balanced sampling (pseudo labeling)
@@ -234,41 +233,78 @@ def get_balanced_class(samples, budget=1000, class_num=10): ## 실험용
                 break
     print('sample distribution = ', class_dist)
     sample1k = np.array(sample1k)
-    return sample1k
+    return sample1k, samples
 
+### 한 batch에서만 뽑기 위해 작성
+def get_plabels4(net, samples, cycle):
+    # dictionary with 10 keys as class labels
+    class_dict = {}
+    [class_dict.setdefault(x,[]) for x in range(10)]
+
+    sample1k = []
+    sub5k = Loader2(is_train=False,  transform=transform_test, path_list=samples)
+    ploader = torch.utils.data.DataLoader(sub5k, batch_size=1, shuffle=False, num_workers=4) ### 2 -> 8
+
+    top1_scores = []
+    net.eval()
+    with torch.no_grad():
+        for idx, (inputs, targets) in enumerate(ploader):
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = net(inputs)
+            scores, predicted = outputs.max(1)
+            # save top1 confidence score 
+            outputs = F.normalize(outputs, dim=1)
+            probs = F.softmax(outputs, dim=1)
+            top1_scores.append(probs[0][predicted.item()])
+            progress_bar(idx, len(ploader))
+    top1_scores = torch.tensor(top1_scores).cpu().numpy() 
+    idx = np.argsort(top1_scores)
+    samples = np.array(samples)
+    return samples[idx[:]] 
 
 if __name__ == '__main__':
     start = time.time() ###
 
     labeled = []
-        
+
+    #### 실험용
+    # with open(f'./loss_all_batch/batch_0.txt', 'r') as f: 
+    #         samples = f.readlines()
+    ####
+
     CYCLES = total_cycle #####
     for cycle in range(CYCLES):
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[160])
+        # optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(net.parameters(), lr=0.025, momentum=0.9, weight_decay=3e-4, nesterov=True) #####
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[0, 60, 120, 160]) ##### 160
 
         best_acc = 0
         print('Cycle ', cycle)
-
+        # print('total samples length = ', len(samples)) #### 
         # open 5k batch (sorted low->high)
-        with open(f'./loss_6/batch_{cycle}.txt', 'r') as f: #####
+        with open(f'./loss_6/batch_{cycle}.txt', 'r') as f: ##### cycle
             samples = f.readlines()
             
-        if cycle > 0:
+        if cycle > 1:
             print('>> Getting previous checkpoint')
             # prevnet = ResNet18().to(device)
             # prevnet = torch.nn.DataParallel(prevnet)
-            checkpoint = torch.load(f'./{checkpoint_name}/main_{cycle-1}.pth') #####
+            checkpoint = torch.load(f'./checkpoint{file_name}/main_{cycle-1}.pth') #####
             net.load_state_dict(checkpoint['net'])
-
-            # sampling
-            sample1k = get_plabels2(net, samples, cycle)
+            sample1k = get_plabels2(net, samples, cycle) 
+        # if cycle == 1: ##### 실험용
+        #     # sampling
+        #     samples = get_plabels4(net, samples, cycle) #####
+        #     sample1k = samples[(cycle-1)*cycle_budget:cycle*cycle_budget] #####
+        # elif cycle > 1: ####
+        #     sample1k = samples[(cycle-1)*cycle_budget:cycle*cycle_budget] #####
         else:
-            # first iteration: sample 1k at even intervals
+            # first iteration: sample 1k at even intervals 
             samples = np.array(samples)
-            sample1k = samples[[j*5 for j in range(cycle_budget)]] ##### 1000
-            # sample1k = get_balanced_class(samples, cycle_budget, 10) ##### 실험용
+            sample1k = samples[[j*5 for j in range(cycle_budget)]]
+            # sample1k, samples = get_balanced_class(samples, cycle_budget, 10) ##### 실험용
+        print(f'cycle{cycle} active sample length = ', len(sample1k))
         # add 1k samples to labeled set
         labeled.extend(sample1k)
         print(f'>> Labeled length: {len(labeled)}')
@@ -279,8 +315,14 @@ if __name__ == '__main__':
             train(net, criterion, optimizer, epoch, trainloader)
             test(net, criterion, epoch, cycle)
             scheduler.step()
-        with open(f'./{txt_name}.txt', 'a') as f: #####
+        with open(f'./main_best{file_name}.txt', 'a') as f: #####
             f.write(str(cycle) + ' ' + str(best_acc)+'\n')
+    print('total samples length = ', len(labeled))
+    labeld_idx = []
+    for l in labeled:
+        labeld_idx.append(int(l.split('/')[-1].split('.')[0]))
+
+    np.save(f'checkpoint{file_name}/lSet.npy', labeld_idx)
     
     end = time.time()
 
