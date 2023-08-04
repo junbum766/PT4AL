@@ -24,14 +24,14 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 args = parser.parse_args()
 
-file_name = "_6_b50_base_changeLR"
+file_name = "_6_b50_Atypicality_useMainLoss_batch_6_to_1"
 total_cycle = 6
 total_budget = 300
 cycle_budget = total_budget//total_cycle
 
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
-os.environ["CUDA_VISIBLE_DEVICES"]= "2"  # Set the GPUs 3 to use
+os.environ["CUDA_VISIBLE_DEVICES"]= "1"  # Set the GPUs 3 to use
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
@@ -52,7 +52,7 @@ transform_test = transforms.Compose([
 ])
 
 testset = Loader(is_train=False, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=4) ### 2 -> 8
+testloader = torch.utils.data.DataLoader(testset, batch_size=500, shuffle=False, num_workers=4) ### 100
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -268,7 +268,7 @@ if __name__ == '__main__':
     labeled = []
 
     #### 실험용
-    # with open(f'./loss_all_batch/batch_0.txt', 'r') as f: 
+    # with open(f'./loss_all_batch/batch_Atypicality.txt', 'r') as f: 
     #         samples = f.readlines()
     ####
 
@@ -276,6 +276,7 @@ if __name__ == '__main__':
     for cycle in range(CYCLES):
         criterion = nn.CrossEntropyLoss()
         # optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+        # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[160]) 
         optimizer = optim.SGD(net.parameters(), lr=0.025, momentum=0.9, weight_decay=3e-4, nesterov=True) #####
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[0, 60, 120, 160]) ##### 160
 
@@ -283,26 +284,33 @@ if __name__ == '__main__':
         print('Cycle ', cycle)
         # print('total samples length = ', len(samples)) #### 
         # open 5k batch (sorted low->high)
-        with open(f'./loss_6/batch_{cycle}.txt', 'r') as f: ##### cycle
-            samples = f.readlines()
-            
-        if cycle > 1:
+        # with open(f'./loss_6/batch_{cycle}.txt', 'r') as f: ##### cycle
+        #     samples = f.readlines()
+        with open(f'/home/ubuntu/junbeom/repo/PT4AL/atypicality_batch/batch_{6-cycle}.txt', 'r') as f: ##### cycle
+                samples = f.readlines()
+        # sample1k = samples[cycle*cycle_budget:(cycle+1)*cycle_budget] #####
+        
+        if cycle > 0:
             print('>> Getting previous checkpoint')
             # prevnet = ResNet18().to(device)
             # prevnet = torch.nn.DataParallel(prevnet)
             checkpoint = torch.load(f'./checkpoint{file_name}/main_{cycle-1}.pth') #####
             net.load_state_dict(checkpoint['net'])
-            sample1k = get_plabels2(net, samples, cycle) 
+            # sample1k = samples[:cycle_budget] # contrastive feature 의 distance 를 배치로 나눈 데이터셋의 상위 budget 개 샘플링
+            sample1k = get_plabels2(net, samples, cycle) # main model loss
+        else :
+            sample1k = get_plabels2(net, samples, cycle) # main model loss
         # if cycle == 1: ##### 실험용
         #     # sampling
-        #     samples = get_plabels4(net, samples, cycle) #####
+        #     # samples = get_plabels4(net, samples, cycle) #####
         #     sample1k = samples[(cycle-1)*cycle_budget:cycle*cycle_budget] #####
         # elif cycle > 1: ####
         #     sample1k = samples[(cycle-1)*cycle_budget:cycle*cycle_budget] #####
-        else:
-            # first iteration: sample 1k at even intervals 
-            samples = np.array(samples)
-            sample1k = samples[[j*5 for j in range(cycle_budget)]]
+        # else:
+        #     # first iteration: sample 1k at even intervals 
+        #     samples = np.array(samples)
+        #     sample1k = samples[[j*5 for j in range(cycle_budget)]] #### default = j*5
+            # sample1k = samples[[j*90 for j in range(cycle_budget)]] ####
             # sample1k, samples = get_balanced_class(samples, cycle_budget, 10) ##### 실험용
         print(f'cycle{cycle} active sample length = ', len(sample1k))
         # add 1k samples to labeled set

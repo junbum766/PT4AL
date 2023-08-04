@@ -10,8 +10,8 @@ import random
 import cv2
 
 class TypiLoader(Dataset):
-    def __init__(self, path='/home/ubuntu/junbeom/data/cifar10/PT4AL'):
-        self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/train/*/*')
+    def __init__(self, path='/data/junbeom/data/cifar10/PT4AL'):
+        self.img_path = glob.glob('/data/junbeom/data/cifar10/PT4AL/train/*/*')
 
     def __len__(self):
         return len(self.img_path)
@@ -21,14 +21,14 @@ class TypiLoader(Dataset):
 
 
 class RotationLoader(Dataset):
-    def __init__(self, is_train=True, transform=None, path='/home/ubuntu/junbeom/data/cifar10/PT4AL'):
+    def __init__(self, is_train=True, transform=None, path='/data/junbeom/data/cifar10/PT4AL'):
         self.is_train = is_train
         self.transform = transform
         # self.h_flip = transforms.RandomHorizontalFlip(p=1)
         if self.is_train == 0: # train
-            self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/train/*/*')
+            self.img_path = glob.glob('/data/junbeom/data/cifar10/PT4AL/train/*/*')
         else:
-            self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/train/*/*')
+            self.img_path = glob.glob('/data/junbeom/data/cifar10/PT4AL/train/*/*')
 
     def __len__(self):
         return len(self.img_path)
@@ -57,7 +57,7 @@ class RotationLoader(Dataset):
             return imgs[rotations[0]], imgs[rotations[1]], imgs[rotations[2]], imgs[rotations[3]], rotations[0], rotations[1], rotations[2], rotations[3], self.img_path[idx]
 
 class Loader2(Dataset):
-    def __init__(self, is_train=True, transform=None, path='/home/ubuntu/junbeom/data/cifar10/PT4AL', path_list=None):
+    def __init__(self, is_train=True, transform=None, path='/data/junbeom/data/cifar10/PT4AL', path_list=None):
         self.is_train = is_train
         self.transform = transform
         self.path_list = path_list
@@ -66,7 +66,7 @@ class Loader2(Dataset):
             self.img_path = path_list
         else:
             if path_list is None:
-                self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/*/*') # for loss extraction
+                self.img_path = glob.glob('/data/junbeom/data/cifar10/PT4AL/*/*') # for loss extraction
             else:
                 self.img_path = path_list
     def __len__(self):
@@ -87,7 +87,7 @@ class Loader2(Dataset):
         return img, label
     
 class Loader_Cold(Dataset):
-    def __init__(self, is_train=True, transform=None, path='/home/ubuntu/junbeom/data/cifar10/PT4AL'):
+    def __init__(self, is_train=True, transform=None, path='/data/junbeom/data/cifar10/PT4AL'):
         self.classes = 10
         self.is_train = is_train
         self.transform = transform
@@ -98,7 +98,7 @@ class Loader_Cold(Dataset):
         if self.is_train==True: # train
             self.img_path = self.list
         else:
-            self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/test/*/*')
+            self.img_path = glob.glob('/data/junbeom/data/cifar10/PT4AL/test/*/*')
 
     def __len__(self):
         return len(self.img_path)
@@ -115,14 +115,14 @@ class Loader_Cold(Dataset):
         return img, label
     
 class Loader(Dataset):
-    def __init__(self, is_train=True, transform=None, path='/home/ubuntu/junbeom/data/cifar10/PT4AL'):
+    def __init__(self, is_train=True, transform=None, path='/data/junbeom/data/cifar10/PT4AL'):
         self.classes = 10 
         self.is_train = is_train
         self.transform = transform
         if self.is_train: # train
-            self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/train/*/*')
+            self.img_path = glob.glob('/data/junbeom/data/cifar10/PT4AL/train/*/*')
         else:
-            self.img_path = glob.glob('/home/ubuntu/junbeom/data/cifar10/PT4AL/test/*/*')
+            self.img_path = glob.glob('/data/junbeom/data/cifar10/PT4AL/test/*/*')
 
     def __len__(self):
         return len(self.img_path)

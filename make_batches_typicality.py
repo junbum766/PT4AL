@@ -55,7 +55,7 @@ if __name__ == "__main__":
     class_num = 10
     simclr_feature = np.load("/home/ubuntu/junbeom/repo/PT4AL/simCLR_feature/features_seed1.npy", allow_pickle=True)
     typicality = calculate_typicality(simclr_feature, class_num)
-    typicality = typicality.argsort()[::-1]
+    typicality = typicality.argsort()
 
     with torch.no_grad():
         for batch_idx, path in enumerate(testloader):
@@ -82,5 +82,5 @@ if __name__ == "__main__":
     losses = losses[typicality]
 
     for t in losses:
-        with open('./batch_typicality.txt', 'a') as f: 
+        with open('./batch_Atypicality.txt', 'a') as f: 
             f.write(str(t))
